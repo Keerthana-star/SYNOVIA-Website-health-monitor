@@ -1,0 +1,17 @@
+def send_sms_alert(site_url, status_code, message):
+    if not all([TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_SMS_NUMBER, USER_PHONE_NUMBER]):
+        print("SMS ALERT SKIPPED: Missing Twilio SMS credentials.")
+        return
+
+    sms_body = f"🚨 ALERT! {site_url} is DOWN. Status: {status_code}. Change: {message}"
+    client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+    
+    try:
+        client.messages.create(
+            to=USER_PHONE_NUMBER,
+            from_=TWILIO_SMS_NUMBER,
+            body=sms_body
+        )
+        print(f"✅ SMS ALERT SENT for {site_url}")
+    except Exception as e:
+        print(f"❌ SMS FAILED: {e}")

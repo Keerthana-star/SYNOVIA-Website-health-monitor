@@ -1,0 +1,18 @@
+def send_whatsapp_alert(site_url, status_code, message):
+    if not all([TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WA_NUMBER, USER_PHONE_NUMBER]):
+        print("WHATSAPP ALERT SKIPPED: Missing Twilio WhatsApp credentials.")
+        return
+        
+    wa_body = f"🚨 WhatsApp Alert! {site_url} is DOWN. Status: {status_code}. Change: {message}"
+    client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+
+    try:
+        # Twilio requires 'whatsapp:' prefix for WhatsApp messaging
+        client.messages.create(
+            to=f"whatsapp:{USER_PHONE_NUMBER}", 
+            from_=f"whatsapp:{TWILIO_WA_NUMBER}",
+            body=wa_body
+        )
+        print(f"✅ WHATSAPP ALERT SENT for {site_url}")
+    except Exception as e:
+        print(f"❌ WHATSAPP FAILED: {e}")

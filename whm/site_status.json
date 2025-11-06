@@ -1,0 +1,11 @@
+{
+    "https://www.google.com": {
+        "last_status": "UP"
+    },
+    "https://www.example.com": {
+        "last_status": "UP"
+    },
+    "http://an-intentional-fail-domain-123.net": {
+        "last_status": "DOWN"
+    }
+}

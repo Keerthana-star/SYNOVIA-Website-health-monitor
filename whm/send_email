@@ -1,0 +1,21 @@
+def send_email_alert(site_url, status_code, message):
+    if not SENDGRID_API_KEY:
+        print("EMAIL ALERT SKIPPED: Missing SendGrid API Key.")
+        return
+        
+    subject = f"🚨 Site Down: {site_url} (Code: {status_code})"
+    body = f"The site health status has changed to: {message}\nURL: {site_url}\nCode: {status_code}"
+
+    mail_message = Mail(
+        from_email=ALERT_SENDER_EMAIL,
+        to_emails=ALERT_RECIPIENT_EMAIL,
+        subject=subject,
+        plain_text_content=body
+    )
+
+    try:
+        sg = SendGridAPIClient(SENDGRID_API_KEY)
+        sg.send(mail_message)
+        print(f"✅ EMAIL ALERT SENT for {site_url}")
+    except Exception as e:
+        print(f"❌ EMAIL FAILED: {e}")

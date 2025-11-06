@@ -1,0 +1,10 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Website Health Monitor</title>
+</head>
+<body>
+    <h1>Website Health Monitor Dashboard Loading...</h1>
+    <p>This confirms the 'TemplateDoesNotExist' error is now fixed!</p>
+</body>
+</html>

@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Website Health Monitor</title>
+    <!-- Load Tailwind CSS and Chart.js from CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+    <!-- Load Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <style>
+        /* Define a consistent color palette */
+        :root {
+            --color-primary-hex: #4F46E5; /* Indigo 600 */
+        }
+        .bg-primary { background-color: var(--color-primary-hex); }
+        .text-primary { color: var(--color-primary-hex); }
+        .border-primary { border-color: var(--color-primary-hex); }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; 
+        }
+        .card {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+            border-radius: 0.75rem; 
+        }
+        /* Status Colors */
+        .status-up { background-color: #10b981; } /* Green */
+        .status-down { background-color: #ef4444; } /* Red */
+        .status-slow { background-color: #f59e0b; } /* Amber/Yellow */
+        .status-unknown { background-color: #6b7280; } /* Gray */
+        
+        /* Ensure Authentication Pages are vertically centered */
+        #app-container {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+        }
+        .auth-container {
+            max-width: 560px;
+            width: 100%;
+            margin-top: 5rem;
+        }
+
+        /* Modal styling */
+        .modal {
+            background-color: rgba(0, 0, 0, 0.5);
+            transition: opacity 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Main Application Container -->
+    <div id="app-container" class="p-4 md:p-8">
+
+        <!-- 1. REGISTRATION PAGE -->
+        <div id="register-page" class="page auth-container mx-auto p-8 bg-white card hidden">
+            <h1 class="text-3xl font-bold text-center text-gray-800 mb-2">Create Your Account</h1>
+            <p class="text-center text-gray-500 mb-8">Secure one-time registration.</p>
+            
+            <form onsubmit="event.preventDefault(); handleRegistration();" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div><label for="reg-first-name" class="block text-sm font-medium text-gray-700">First Name</label><input type="text" id="reg-first-name" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"></div>
+                    <div><label for="reg-last-name" class="block text-sm font-medium text-gray-700">Last Name</label><input type="text" id="reg-last-name" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"></div>
+                </div>
+                
+                <div><label for="reg-email" class="block text-sm font-medium text-gray-700">Email Address</label><input type="email" id="reg-email" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500" placeholder="you@company.com"></div>
+                <div><label for="reg-mobile" class="block text-sm font-medium text-gray-700">Mobile Number</label><input type="tel" id="reg-mobile" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500" placeholder="+91 98765 43210"></div>
+                <div><label for="reg-password" class="block text-sm font-medium text-gray-700">Password</label><input type="password" id="reg-password" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500" placeholder="••••••••"></div>
+                
+                <div id="reg-message" class="text-red-500 text-sm hidden"></div>
+                <button type="submit" class="w-full bg-primary text-white py-3 px-4 rounded-lg hover:bg-indigo-700 transition duration-150 ease-in-out font-semibold">
+                    Register & Send OTP
+                </button>
+            </form>
+            
+            <p class="mt-6 text-center text-sm text-gray-600">Already registered? <button onclick="showPage('login-page')" class="text-primary font-medium hover:text-indigo-500">Log In</button></p>
+        </div>
+
+        <!-- 2. OTP VERIFICATION PAGE -->
+        <div id="otp-page" class="page auth-container max-w-md mx-auto p-8 bg-white card hidden">
+            <h1 class="text-3xl font-bold text-center text-gray-800 mb-4">Verify Mobile Number</h1>
+            <p class="text-center text-gray-500 mb-8">An OTP (Simulated: **123456**) has been sent to your mobile.</p>
+            
+            <form onsubmit="event.preventDefault(); handleOTPVerification();" class="space-y-6">
+                <div>
+                    <label for="otp-input" class="block text-sm font-medium text-gray-700">Enter OTP</label>
+                    <input type="text" id="otp-input" required maxlength="6" pattern="\d{6}" class="w-full px-4 py-2 border border-gray-300 rounded-lg text-center text-xl tracking-widest focus:ring-indigo-500 focus:border-indigo-500" placeholder="123456">
+                </div>
+                <div id="otp-message" class="text-red-500 text-sm hidden"></div>
+                <button type="submit" class="w-full bg-primary text-white py-3 px-4 rounded-lg hover:bg-indigo-700 transition duration-150 ease-in-out font-semibold">
+                    Verify & Complete Registration
+                </button>
+            </form>
+        </div>
+        
+        <!-- 3. LOGIN PAGE -->
+        <div id="login-page" class="page auth-container max-w-md mx-auto p-8 bg-white card hidden">
+            <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">Welcome Back</h1>
+            
+            <form onsubmit="event.preventDefault(); handleLogin();" class="space-y-6">
+                <div><label for="login-email" class="block text-sm font-medium text-gray-700">Email Address</label><input type="email" id="login-email" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500" placeholder="you@company.com"></div>
+                <div><label for="login-password" class="block text-sm font-medium text-gray-700">Password</label><input type="password" id="login-password" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500" placeholder="••••••••"></div>
+                <div id="login-message" class="text-red-500 text-sm hidden"></div>
+                <button type="submit" class="w-full bg-primary text-white py-3 px-4 rounded-lg hover:bg-indigo-700 transition duration-150 ease-in-out font-semibold">
+                    Log In
+                </button>
+            </form>
+            
+            <p class="mt-6 text-center text-sm text-gray-600">New user? <button onclick="showPage('register-page')" class="text-primary font-medium hover:text-indigo-500">Register Now</button></p>
+        </div>
+
+        <!-- 4. MAIN DASHBOARD PAGE -->
+        <div id="dashboard-page" class="page max-w-7xl w-full space-y-8 hidden pt-4 pb-16">
+            
+            <!-- Dashboard Header and Stats Overview -->
+            <div class="space-y-6">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-4">
+                    <h1 class="text-3xl font-bold text-gray-800">Health Monitor Dashboard</h1>
+                    <button onclick="handleLogout()" 
+                            class="bg-gray-200 text-gray-700 py-2 px-4 rounded-lg hover:bg-red-200 transition font-medium text-sm mt-3 sm:mt-0">
+                        <i class="fas fa-sign-out-alt mr-1"></i> Log Out
+                    </button>
+                </div>
+                
+                <!-- Status Overview Cards -->
+                <div id="stats-overview" class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                    <!-- Stats injected by JS -->
+                </div>
+            </div>
+
+            <!-- Alerts and Configuration -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                
+                <!-- Add New Website Form (lg:col-span-1) -->
+                <div class="lg:col-span-1">
+                    <div class="card bg-white p-6 h-full">
+                        <h2 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Add New Endpoint</h2>
+                        
+                        <form id="add-website-form" onsubmit="event.preventDefault(); addWebsite();" class="space-y-4">
+                            <div><label for="name" class="block text-xs font-medium text-gray-700 mb-1">Website Name</label><input type="text" id="name" required class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500" placeholder="My Company Homepage"></div>
+                            <div><label for="url" class="block text-xs font-medium text-gray-700 mb-1">URL (https:// required)</label><input type="url" id="url" required class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500" placeholder="https://example.com"></div>
+                            <div>
+                                <label for="interval" class="block text-xs font-medium text-gray-700 mb-1">Monitoring Interval (Seconds)</label>
+                                <select id="interval" required class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-white">
+                                    <option value="60" selected>1 Minute (60s)</option>
+                                    <option value="600">10 Minutes (600s)</option>
+                                    <option value="900">15 Minutes (900s)</option>
+                                    <option value="1800">30 Minutes (1800s)</option>
+                                    <option value="3600">1 Hour (3600s)</option>
+                                </select>
+                            </div>
+                            <div><label for="alert_emails" class="block text-xs font-medium text-gray-700 mb-1">Alert Emails (Comma-separated)</label><input type="text" id="alert_emails" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500" placeholder="user@example.com"></div>
+                            <div><label for="alert_phones" class="block text-xs font-medium text-gray-700 mb-1">Alert Phone Numbers (Comma-separated)</label><input type="text" id="alert_phones" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500" placeholder="+15551234567"></div>
+
+                            <button type="submit" class="w-full bg-primary text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition duration-150 ease-in-out font-semibold mt-4">
+                                Add Endpoint
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Alert Notifications Panel (lg:col-span-2) -->
+                <div class="lg:col-span-2">
+                    <div class="card bg-white p-6 h-full flex flex-col">
+                        <h2 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">Alert Notifications (Simulated)</h2>
+                        <div id="alert-log" class="flex-grow overflow-y-auto space-y-2 text-sm p-2 bg-gray-50 rounded-lg">
+                            <p class="text-gray-500 text-center p-4">A log of all simulated alerts will appear here when a monitored site goes DOWN or SLOW.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Historical Charts -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Response Time Chart -->
+                <div class="card bg-white p-6 h-80">
+                    <h3 class="text-xl font-medium mb-4 text-gray-700">7-Day Average Response Time (ms)</h3>
+                    <div class="h-full -mt-2"><canvas id="responseTimeChart"></canvas></div>
+                </div>
+
+                <!-- Uptime Chart -->
+                <div class="card bg-white p-6 h-80">
+                    <h3 class="text-xl font-medium mb-4 text-gray-700">7-Day Uptime Percentage (%)</h3>
+                    <div class="h-full -mt-2"><canvas id="uptimeChart"></canvas></div>
+                </div>
+            </div>
+            
+            <!-- Monitored Websites List -->
+            <h2 class="text-2xl font-semibold text-gray-800 border-b pb-2">Monitored Endpoints</h2>
+            
+            <div id="website-list" class="space-y-4">
+                <!-- Website list injected by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal Structure (Hidden by default) -->
+    <div id="confirmation-modal" class="modal fixed inset-0 z-50 flex items-center justify-center opacity-0 pointer-events-none">
+        <div class="bg-white card w-96 p-6 space-y-4 transform scale-95 transition-all duration-300">
+            <h3 class="text-xl font-bold text-gray-800">Confirm Action</h3>
+            <p id="modal-text" class="text-gray-600">Are you sure you want to proceed?</p>
+            <div class="flex justify-end space-x-3">
+                <button onclick="hideModal()" class="bg-gray-200 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-300 transition font-medium">Cancel</button>
+                <button id="modal-confirm-btn" class="bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 transition font-medium">Confirm</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // --- CONSTANTS AND STATE ---
+        const USER_KEY = 'monitoring_user_data_v2';
+        const LOGGED_IN_KEY = 'is_logged_in_v2';
+        const MONITORING_KEY = 'monitored_websites_v2';
+        const ALERTS_KEY = 'alert_history';
+        const SIMULATED_OTP = '123456';
+        let monitoringLoop = null; 
+        let responseTimeChartInstance = null;
+        let uptimeChartInstance = null;
+        
+        // Initial mock data
+        const initialWebsites = [
+            // Note: Set lastCheck to 0 to ensure immediate check upon loading
+            // Initial interval set to 60s (1 minute)
+            { id: 1, name: 'Gemini Home', url: 'https://google.com', interval: 60, emails: 'alert@gemini.com', phones: '', status: 'UNKNOWN', latency: null, lastCheck: 0 },
+            { id: 2, name: 'Cloud Service', url: 'https://cloud.com', interval: 600, emails: 'admin@cloud.com', phones: '+19998887777', status: 'UNKNOWN', latency: null, lastCheck: 0 },
+        ];
+
+        // --- DATA HANDLERS ---
+        
+        function loadWebsites() {
+            const data = localStorage.getItem(MONITORING_KEY);
+            // Ensure initial websites are loaded if nothing is in local storage
+            if (!data) {
+                localStorage.setItem(MONITORING_KEY, JSON.stringify(initialWebsites));
+                return initialWebsites;
+            }
+            return JSON.parse(data);
+        }
+
+        function saveWebsites(websites) {
+            localStorage.setItem(MONITORING_KEY, JSON.stringify(websites));
+            updateDashboard();
+        }
+
+        function loadAlerts() {
+            const data = localStorage.getItem(ALERTS_KEY);
+            return data ? JSON.parse(data) : [];
+        }
+
+        function saveAlerts(alerts) {
+            localStorage.setItem(ALERTS_KEY, JSON.stringify(alerts));
+        }
+
+
+        // --- AUTHENTICATION HANDLERS ---
+        
+        function isRegistered() {
+            return localStorage.getItem(USER_KEY) !== null;
+        }
+
+        function showAuthMessage(text, isError = true, targetId) {
+            const el = document.getElementById(targetId);
+            if (!el) return;
+            el.textContent = text;
+            el.classList.remove('hidden', 'text-red-500', 'text-green-500');
+            el.classList.add(isError ? 'text-red-500' : 'text-green-500');
+            setTimeout(() => el.classList.add('hidden'), 5000);
+        }
+
+        function handleRegistration() {
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+            const firstName = document.getElementById('reg-first-name').value;
+            
+            if (!email || !password || !firstName) {
+                showAuthMessage('Please fill out all required fields.', true, 'reg-message');
+                return;
+            }
+
+            const userData = { email, password, firstName, isVerified: false };
+            sessionStorage.setItem('temp_reg_user', JSON.stringify(userData));
+            
+            showAuthMessage('OTP sent successfully (Simulated: 123456).', false, 'reg-message');
+            setTimeout(() => showPage('otp-page'), 500); 
+        }
+
+        function handleOTPVerification() {
+            const otp = document.getElementById('otp-input').value;
+            const tempUser = JSON.parse(sessionStorage.getItem('temp_reg_user'));
+
+            if (otp === SIMULATED_OTP && tempUser) {
+                tempUser.isVerified = true;
+                localStorage.setItem(USER_KEY, JSON.stringify(tempUser));
+                sessionStorage.removeItem('temp_reg_user');
+                localStorage.setItem(LOGGED_IN_KEY, 'true');
+                
+                showAuthMessage('Verification Successful! Redirecting...', false, 'otp-message');
+                
+                setTimeout(() => showPage('dashboard-page'), 500); 
+
+            } else {
+                showAuthMessage('Invalid OTP or missing registration data. Please try again.', true, 'otp-message');
+            }
+        }
+
+        function handleLogin() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const storedUser = JSON.parse(localStorage.getItem(USER_KEY));
+            
+            if (!storedUser) {
+                showAuthMessage('No user found. Please register first.', true, 'login-message');
+                return;
+            }
+
+            if (storedUser.email === email && storedUser.password === password) {
+                localStorage.setItem(LOGGED_IN_KEY, 'true');
+                showPage('dashboard-page');
+            } else {
+                showAuthMessage('Invalid email or password.', true, 'login-message');
+            }
+        }
+
+        function handleLogout() {
+            clearInterval(monitoringLoop);
+            localStorage.removeItem(LOGGED_IN_KEY);
+            showPage('login-page');
+        }
+
+        // --- NOTIFICATION & ALERT LOGIC ---
+
+        function requestNotificationPermission() {
+            if (!("Notification" in window)) {
+                console.warn("This browser does not support desktop notification.");
+                return;
+            }
+            if (Notification.permission === "default") {
+                Notification.requestPermission();
+            }
+        }
+
+        function sendBrowserNotification(websiteName, newStatus) {
+            if (Notification.permission === "granted") {
+                let title = `Monitor Alert: ${websiteName} is ${newStatus}!`;
+                let body = newStatus === 'DOWN' 
+                    ? `CRITICAL: ${websiteName} failed its check. Check immediately.` 
+                    : `WARNING: ${websiteName} is experiencing high latency.`;
+                
+                new Notification(title, {
+                    body: body,
+                    icon: 'https://placehold.co/64x64/ef4444/ffffff?text=!G', // Simple placeholder icon
+                    tag: websiteName + newStatus // Prevent duplicate notifications for the same alert
+                });
+            } else {
+                // Console log this so the user knows why they aren't seeing the pop-up
+                console.info(`Browser notification not sent for ${websiteName} - Permission denied or not granted.`);
+            }
+        }
+
+
+        function logAlert(website, oldStatus, newStatus) {
+            const alerts = loadAlerts();
+            const timestamp = new Date().toLocaleTimeString();
+            
+            const logEntry = {
+                id: Date.now(),
+                timestamp,
+                websiteName: website.name,
+                oldStatus,
+                newStatus,
+                emails: website.emails,
+                phones: website.phones
+            };
+
+            // Trigger Browser Notification only for critical/warning states
+            if (newStatus === 'DOWN' || newStatus === 'SLOW') {
+                sendBrowserNotification(website.name, newStatus);
+            }
+            
+            alerts.unshift(logEntry); // Add to the top
+            // Keep only the last 30 alerts to prevent excessive storage
+            saveAlerts(alerts.slice(0, 30)); 
+            renderAlertLog();
+        }
+
+        function simulateCheck(url) {
+            // Simulate status changes based on URL and time to make it dynamic
+            const hash = url.length % 5;
+            const currentTimeSec = new Date().getSeconds();
+            let status, latency;
+
+            // Introduce a pattern where the status flips at certain seconds
+            if (hash === 0 && (currentTimeSec % 10 < 5)) { // DOWN for 5 seconds every 10 seconds (50% chance for this site)
+                status = 'DOWN';
+                latency = null;
+            } else if (hash === 1 || hash === 2) { // SLOW (40% chance for this site)
+                status = 'SLOW';
+                latency = (Math.random() * 400 + 400); // 400ms to 800ms
+            } else { // UP (10% chance for hash 0, 60% for others)
+                status = 'UP';
+                latency = (Math.random() * 200 + 50); // 50ms to 250ms
+            }
+
+            return { status, latency };
+        }
+
+        function runMonitoringCheck() {
+            let websites = loadWebsites();
+            const now = Date.now();
+            let hasChanged = false;
+
+            websites = websites.map(website => {
+                // website.interval is in seconds, so multiply by 1000 for milliseconds
+                const checkInterval = website.interval * 1000;
+                const lastCheckTime = website.lastCheck || 0;
+                
+                if (now - lastCheckTime >= checkInterval) {
+                    const result = simulateCheck(website.url);
+                    const oldStatus = website.status;
+
+                    website.status = result.status;
+                    website.latency = result.latency;
+                    website.lastCheck = now;
+                    hasChanged = true;
+
+                    // ALERT TRIGGER: Check for status change
+                    if (oldStatus !== website.status) {
+                        logAlert(website, oldStatus, website.status);
+                    }
+                }
+                return website;
+            });
+            
+            if (hasChanged) {
+                localStorage.setItem(MONITORING_KEY, JSON.stringify(websites));
+                updateDashboard();
+            }
+        }
+
+        function startMonitoring() {
+            if (monitoringLoop) clearInterval(monitoringLoop);
+            // Run a consistent loop every 1 second to check if any site's interval has passed
+            monitoringLoop = setInterval(runMonitoringCheck, 1000); 
+        }
+
+        // --- DASHBOARD UI RENDERING ---
+
+        function updateDashboard() {
+            const websites = loadWebsites();
+            updateStatsOverview(websites);
+            renderWebsiteList(websites);
+            renderAlertLog(); 
+            initCharts();
+        }
+
+        function updateStatsOverview(websites) {
+            const total = websites.length;
+            const up = websites.filter(w => w.status === 'UP').length;
+            const slow = websites.filter(w => w.status === 'SLOW').length;
+            const down = websites.filter(w => w.status === 'DOWN').length;
+
+            const statsHtml = `
+                <div class="card bg-white p-6 flex items-center justify-between">
+                    <div><p class="text-sm font-medium text-gray-500">Total Websites</p><p class="text-3xl font-bold text-gray-900">${total}</p></div>
+                    <i class="fas fa-globe text-primary text-4xl opacity-50"></i>
+                </div>
+                <div class="card bg-white p-6 flex items-center justify-between">
+                    <div><p class="text-sm font-medium text-gray-500">Online (UP)</p><p class="text-3xl font-bold text-green-600">${up}</p></div>
+                    <i class="fas fa-check-circle text-green-600 text-4xl opacity-50"></i>
+                </div>
+                <div class="card bg-white p-6 flex items-center justify-between">
+                    <div><p class="text-sm font-medium text-gray-500">Slow (Warning)</p><p class="text-3xl font-bold text-yellow-600">${slow}</p></div>
+                    <i class="fas fa-clock text-yellow-600 text-4xl opacity-50"></i>
+                </div>
+                <div class="card bg-white p-6 flex items-center justify-between">
+                    <div><p class="text-sm font-medium text-gray-500">Down (Critical)</p><p class="text-3xl font-bold text-red-600">${down}</p></div>
+                    <i class="fas fa-times-circle text-red-600 text-4xl opacity-50"></i>
+                </div>
+            `;
+            document.getElementById('stats-overview').innerHTML = statsHtml;
+        }
+
+        function renderAlertLog() {
+            const alertLogEl = document.getElementById('alert-log');
+            const alerts = loadAlerts();
+
+            if (alerts.length === 0) {
+                alertLogEl.innerHTML = `<p class="text-gray-500 text-center p-4">A log of all simulated alerts will appear here when a monitored site goes DOWN or SLOW.</p>`;
+                return;
+            }
+
+            const alertHtml = alerts.map(alert => {
+                let colorClass = 'text-gray-700 bg-gray-100';
+                let icon = 'fas fa-info-circle';
+                let statusMsg = '';
+                let alertTitle = 'Status Change';
+
+                if (alert.newStatus === 'DOWN') {
+                    colorClass = 'text-red-800 bg-red-100 border-red-400';
+                    icon = 'fas fa-exclamation-triangle';
+                    alertTitle = 'CRITICAL ALERT';
+                    statusMsg = `${alert.websiteName} is DOWN.`; // Removed Markdown bolding here
+                } else if (alert.newStatus === 'SLOW') {
+                    colorClass = 'text-yellow-800 bg-yellow-100 border-yellow-400';
+                    icon = 'fas fa-stopwatch';
+                    alertTitle = 'WARNING ALERT';
+                    statusMsg = `${alert.websiteName} is SLOW.`; // Removed Markdown bolding here
+                } else if (alert.newStatus === 'UP' && (alert.oldStatus === 'DOWN' || alert.oldStatus === 'SLOW')) {
+                    colorClass = 'text-green-800 bg-green-100 border-green-400';
+                    icon = 'fas fa-check-circle';
+                    alertTitle = 'RECOVERY';
+                    statusMsg = `${alert.websiteName} is UP.`; // Removed Markdown bolding here
+                }
+
+                const emailCount = alert.emails ? alert.emails.split(',').filter(e => e.trim()).length : 0;
+                const phoneCount = alert.phones ? alert.phones.split(',').filter(p => p.trim()).length : 0;
+
+                return `
+                    <div class="p-3 rounded-lg border flex items-start space-x-3 ${colorClass}">
+                        <i class="${icon} mt-1 flex-shrink-0"></i>
+                        <div class="flex-grow">
+                            <p class="font-semibold">${alertTitle}: <span class="font-bold">${statusMsg}</span></p>
+                            <p class="text-xs mt-1">
+                                Simulated notifications sent to: 
+                                <span class="font-medium">${emailCount} Email(s)</span> and 
+                                <span class="font-medium">${phoneCount} SMS/WhatsApp(s)</span>.
+                            </p>
+                        </div>
+                        <span class="text-xs text-gray-500 flex-shrink-0">${alert.timestamp}</span>
+                    </div>
+                `;
+            }).join('');
+
+            alertLogEl.innerHTML = alertHtml;
+        }
+
+        function renderWebsiteList(websites) {
+            const listEl = document.getElementById('website-list');
+            
+            if (websites.length === 0) {
+                listEl.innerHTML = `<p class="text-gray-600 p-4 bg-yellow-100 rounded-lg border border-yellow-200">
+                    You are not currently monitoring any websites. Use the form above to add your first endpoint!
+                </p>`;
+                return;
+            }
+
+            const html = websites.map(website => {
+                let statusClass = 'status-unknown';
+                let statusText = 'UNKNOWN';
+                let latencyDisplay = 'N/A';
+                let borderColor = 'border-gray-200';
+                
+                if (website.status === 'UP') {
+                    statusClass = 'status-up'; statusText = 'UP';
+                } else if (website.status === 'DOWN') {
+                    statusClass = 'status-down'; statusText = 'DOWN';
+                    borderColor = 'border-red-500 ring-4 ring-red-100'; // Highlight down status
+                } else if (website.status === 'SLOW') {
+                    statusClass = 'status-slow'; statusText = 'SLOW';
+                    borderColor = 'border-yellow-500 ring-4 ring-yellow-100'; // Highlight slow status
+                }
+                
+                if (website.latency) {
+                    latencyDisplay = `${website.latency.toFixed(2)} ms`;
+                }
+
+                const lastCheckDate = new Date(website.lastCheck);
+                const lastCheckDisplay = website.lastCheck ? lastCheckDate.toLocaleTimeString() : 'Never';
+                
+                // Helper to convert seconds back to friendly format for display
+                let intervalDisplay;
+                if (website.interval === 60) intervalDisplay = '1 minute';
+                else if (website.interval === 600) intervalDisplay = '10 minutes';
+                else if (website.interval === 900) intervalDisplay = '15 minutes';
+                else if (website.interval === 1800) intervalDisplay = '30 minutes';
+                else if (website.interval === 3600) intervalDisplay = '1 hour';
+                else intervalDisplay = `${website.interval} seconds`;
+
+
+                return `
+                    <div class="card bg-white p-5 flex flex-col md:flex-row justify-between items-start md:items-center border-l-8 ${borderColor} hover:shadow-lg transition">
+                        <div class="flex-grow mb-3 md:mb-0">
+                            <div class="flex items-center space-x-3">
+                                <span class="px-3 py-1 text-xs font-semibold rounded-full text-white ${statusClass}">
+                                    ${statusText}
+                                </span>
+                                <a href="${website.url}" target="_blank" class="text-lg font-bold text-gray-800 hover:text-primary truncate" title="${website.url}">
+                                    ${website.name}
+                                </a>
+                            </div>
+                            
+                            <p class="text-sm text-gray-500 mt-1 truncate max-w-full md:max-w-md">${website.url}</p>
+                            
+                            <div class="mt-2 text-xs text-gray-600 space-y-1">
+                                <p><strong class="font-medium">Interval:</strong> ${intervalDisplay}</p>
+                                <p><strong class="font-medium">Alerts:</strong> Emails: ${website.emails || "None"} | Phones: ${website.phones || "None"}</p>
+                            </div>
+                        </div>
+
+                        <div class="text-left md:text-right flex items-center md:flex-col space-y-1 md:space-y-2 w-full md:w-auto">
+                            <p class="text-sm text-gray-700 mr-4 md:mr-0">
+                                <strong class="font-semibold">Latency:</strong> 
+                                <span class="text-primary">${latencyDisplay}</span>
+                            </p>
+                            <p class="text-xs text-gray-500 mr-4 md:mr-0">
+                                Last Check: ${lastCheckDisplay} UTC
+                            </p>
+                            
+                            <button onclick="showDeleteModal(${website.id}, '${website.name}')" 
+                                    class="bg-red-500 text-white py-1 px-3 text-xs rounded-lg hover:bg-red-600 transition font-medium">
+                                Stop
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            listEl.innerHTML = html;
+        }
+
+        function addWebsite() {
+            const name = document.getElementById('name').value;
+            const url = document.getElementById('url').value;
+            const interval = document.getElementById('interval').value;
+            const emails = document.getElementById('alert_emails').value;
+            const phones = document.getElementById('alert_phones').value;
+            
+            if (!name || !url || !interval) return;
+
+            const websites = loadWebsites();
+            const newId = websites.length > 0 ? Math.max(...websites.map(w => w.id)) + 1 : 1;
+            
+            const newWebsite = {
+                id: newId,
+                name,
+                url,
+                interval: parseInt(interval),
+                emails,
+                phones,
+                status: 'UNKNOWN',
+                latency: null,
+                lastCheck: 0 
+            };
+
+            websites.push(newWebsite);
+            saveWebsites(websites);
+            runMonitoringCheck();
+            
+            // Clear form
+            document.getElementById('add-website-form').reset();
+        }
+
+        // --- MODAL / CONFIRMATION LOGIC ---
+
+        function showDeleteModal(id, name) {
+            const modal = document.getElementById('confirmation-modal');
+            document.getElementById('modal-text').innerHTML = `Are you sure you want to stop monitoring **${name}**? This action cannot be undone.`;
+            
+            const confirmBtn = document.getElementById('modal-confirm-btn');
+            confirmBtn.onclick = () => {
+                deleteWebsite(id);
+                hideModal();
+            };
+
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            modal.querySelector('.card').classList.remove('scale-95');
+        }
+
+        function hideModal() {
+            const modal = document.getElementById('confirmation-modal');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            modal.querySelector('.card').classList.add('scale-95');
+        }
+
+        function deleteWebsite(id) {
+            let websites = loadWebsites();
+            websites = websites.filter(w => w.id !== id);
+            saveWebsites(websites);
+        }
+
+
+        // --- CHART FUNCTIONS ---
+
+        function initCharts() {
+            // Reinitialize charts for dynamic data view (even if it's currently mock data)
+            const rtCtx = document.getElementById('responseTimeChart').getContext('2d');
+            const upCtx = document.getElementById('uptimeChart').getContext('2d');
+            
+            if (responseTimeChartInstance) responseTimeChartInstance.destroy();
+            if (uptimeChartInstance) uptimeChartInstance.destroy();
+
+            // Response Time Chart
+            responseTimeChartInstance = new Chart(rtCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [{
+                        label: 'Avg. Response Time (ms)',
+                        data: [120, 150, 145, 130, 180, 250, 210].map(v => v + Math.random() * 50),
+                        borderColor: '#4F46E5', 
+                        backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                        tension: 0.4, fill: true, pointRadius: 4, pointHoverRadius: 6,
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: { 
+                        y: { beginAtZero: true, title: { display: true, text: 'Response Time (ms)' } } 
+                    },
+                    plugins: { legend: { display: true, position: 'top' } }
+                }
+            });
+
+            // Uptime Chart (Bar Chart)
+            uptimeChartInstance = new Chart(upCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [{
+                        label: 'Uptime Percentage',
+                        data: [100, 99.8, 95.5, 100, 98.2, 100, 100],
+                        backgroundColor: (context) => {
+                            const value = context.dataset.data[context.dataIndex];
+                            if (value < 98) return '#ef4444'; 
+                            if (value < 100) return '#f59e0b'; 
+                            return '#10b981'; 
+                        },
+                        borderRadius: 4,
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { 
+                        y: { beginAtZero: true, max: 100, title: { display: true, text: 'Uptime (%)' } } 
+                    }
+                }
+            });
+        }
+
+        // --- GLOBAL PAGE FLOW ---
+
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(page => page.classList.add('hidden'));
+            const targetPage = document.getElementById(pageId);
+            if (targetPage) targetPage.classList.remove('hidden');
+
+            if (pageId === 'dashboard-page') {
+                document.getElementById('app-container').classList.add('items-start');
+                document.getElementById('app-container').classList.remove('items-center', 'justify-center');
+                startMonitoring();
+                requestNotificationPermission(); // Request permission when dashboard is shown
+            } else {
+                document.getElementById('app-container').classList.add('items-center', 'justify-center');
+                document.getElementById('app-container').classList.remove('items-start');
+                if (monitoringLoop) clearInterval(monitoringLoop); 
+            }
+        }
+
+        // --- Initial App Load ---
+        window.onload = function() {
+            // Load sites on start to ensure initial data setup
+            loadWebsites(); 
+            if (localStorage.getItem(LOGGED_IN_KEY) === 'true') {
+                showPage('dashboard-page');
+            } else if (isRegistered()) {
+                showPage('login-page');
+            } else {
+                showPage('register-page');
+            }
+        };
+    </script>
+</body>
+</html>
