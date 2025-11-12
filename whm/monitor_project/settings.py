@@ -2,9 +2,17 @@
 Django settings for monitor_project project.
 """
 
+"""
+Django settings for monitor_project project.
+"""
+
 from pathlib import Path
+from dotenv import load_dotenv
 import os
 from celery.schedules import crontab
+
+load_dotenv()  # <--- ADD THIS LINE
+
 
 # =================================================================
 # BASE CONFIGURATION
@@ -136,21 +144,22 @@ CELERY_BEAT_SCHEDULE = {
 # =================================================================
 
 # --- EMAIL ALERTING ---
-EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
-EMAIL_FILE_PATH = os.path.join(BASE_DIR.parent, 'emails.log')
-EMAIL_HOST = 'smtp.example.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'your-alert-email@example.com'
-EMAIL_HOST_PASSWORD = 'your-email-password'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.getenv('EMAIL_HOST')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 EMAIL_ENABLED = True
 
-# --- SMS ALERTING (Twilio) ---
-TWILIO_ACCOUNT_SID = 'ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
-TWILIO_AUTH_TOKEN = 'your_twilio_auth_token_here'
-TWILIO_PHONE_NUMBER = '+15017122661'
+# --- SMS & WHATSAPP ALERTING (Twilio) ---
+TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID')
+TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN')
+TWILIO_PHONE_NUMBER = os.getenv('TWILIO_PHONE_NUMBER')
+TWILIO_WHATSAPP_NUMBER = os.getenv('TWILIO_WHATSAPP_NUMBER')
 SMS_ENABLED = True
+
 
 # =================================================================
 # DEFAULT PRIMARY KEY FIELD TYPE

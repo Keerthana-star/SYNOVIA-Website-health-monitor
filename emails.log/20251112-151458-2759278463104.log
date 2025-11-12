@@ -1,0 +1,11 @@
+Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Subject: Test Email from Django
+From: ckeerthana230@gmail.com
+To: receiver@gmail.com
+Date: Wed, 12 Nov 2025 09:44:58 -0000
+Message-ID: <176294069867.2720.17871630729644387337@DESKTOP-KNGNSSD>
+
+This is a test email to verify SMTP setup.
+-------------------------------------------------------------------------------

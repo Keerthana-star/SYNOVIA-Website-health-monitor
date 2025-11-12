@@ -76,30 +76,42 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
 # Class definitions needed by tasks.py
 class Website(models.Model):
-    # Example fields, adapt as needed for your project
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='websites')
+    name = models.CharField(max_length=255)
     url = models.URLField(unique=True)
+    http_method = models.CharField(
+        max_length=10,
+        choices=[('GET', 'GET'), ('POST', 'POST')],
+        default='GET'
+    )
+    last_checked = models.DateTimeField(null=True, blank=True)
+    status_code = models.IntegerField(null=True, blank=True)
+    response_time = models.FloatField(null=True, blank=True)
+    is_up = models.BooleanField(default=True)
     is_active = models.BooleanField(default=True)
-    # Define a __str__ method
+
     def __str__(self):
-        return self.url
+        return f"{self.name} ({self.url})"
+
 
 class CheckResult(models.Model):
-    # Example fields
     website = models.ForeignKey(Website, on_delete=models.CASCADE)
     timestamp = models.DateTimeField(auto_now_add=True)
     status_code = models.IntegerField()
-    response_time = models.FloatField()
-    is_healthy = models.BooleanField()
+    response_time_ms = models.FloatField(null=True, blank=True)
+    is_up = models.BooleanField(default=False)
+    error_message = models.TextField(null=True, blank=True)
+
     def __str__(self):
         return f"{self.website.url} - {self.timestamp.date()}"
 
 
 class AlertContact(models.Model):
-    # Example fields
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='alert_contacts')
     email = models.EmailField(blank=True, null=True)
     phone_number = models.CharField(max_length=15, blank=True, null=True)
     is_primary = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)  # ✅ added field
+
     def __str__(self):
-        return f"Contact for {self.user.mobile_number}"
+        return f"AlertContact for {self.user.email or self.phone_number}"
